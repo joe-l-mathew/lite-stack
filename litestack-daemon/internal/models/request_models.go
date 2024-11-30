@@ -13,3 +13,7 @@ type ContainerCreationRequest struct {
 	InstanceName string `json:"instance_name"`
 	NetworkName  string `json:"network_name"`
 }
+
+type ConatinerDeleteRequest struct {
+	ConatinerName string `json:"container_name"`
+}

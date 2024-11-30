@@ -82,7 +82,3 @@ func deleteNewtwork(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(successResponse)
 
 }
-
-func GetNetworkIdFromName(s string) {
-	panic("unimplemented")
-}

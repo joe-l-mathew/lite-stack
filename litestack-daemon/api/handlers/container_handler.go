@@ -23,8 +23,8 @@ type ConatainerCreationSuccessResponse struct {
 	NetworkUsed string   `json:"newtwork"`
 }
 type ConatinerDeletionSuccessResponse struct {
-	Message   string `json:"message"`
-	NetworkID string `json:"network_id"`
+	Message     string `json:"message"`
+	ContainerId string `json:"conatainer_id"`
 }
 
 func createConatainer(w http.ResponseWriter, r *http.Request) {
@@ -59,4 +59,34 @@ func createConatainer(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func deleteConatainer(w http.ResponseWriter, r *http.Request) {}
+func deleteConatainer(w http.ResponseWriter, r *http.Request) {
+	var containerDelReq request_models.ConatinerDeleteRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&containerDelReq)
+	if err != nil {
+		// If there is an error decoding, send a bad request response
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if containerDelReq.ConatinerName == "" {
+		http.Error(w, "Please pass a Container as string", http.StatusBadRequest)
+		return
+	}
+	container_id := functions.GetContainerIdFromName("litestack-" + containerDelReq.ConatinerName)
+	if container_id == "" {
+		http.Error(w, "Container not found", http.StatusBadRequest)
+		return
+	}
+	err = functions.Delete_Container(container_id, dockerclient.CLI, dockerclient.CTX)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse := ConatinerDeletionSuccessResponse{
+		Message:     "Container deletes successfully",
+		ContainerId: container_id, // Include the network ID
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(successResponse)
+
+}
