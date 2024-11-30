@@ -7,6 +7,7 @@ import (
 	"litestack-daemon/internal/functions"
 	request_models "litestack-daemon/internal/models"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -14,6 +15,7 @@ import (
 func ContainerHandler(router *mux.Router) {
 	router.HandleFunc("/create/conatiner", createConatainer).Methods("POST")
 	router.HandleFunc("/delete/conatiner", deleteConatainer).Methods("POST")
+	router.HandleFunc("/list/containers", listContainers).Methods("GET")
 }
 
 type ConatainerCreationSuccessResponse struct {
@@ -27,6 +29,19 @@ type ConatinerDeletionSuccessResponse struct {
 	ContainerId string `json:"conatainer_id"`
 }
 
+type ListContainersResponse struct {
+	Name      string                        `json:"instance_name"`
+	IpAddress request_models.IpAddressModel `json:"ip_address"`
+	Id        string                        `json:"instance_id"`
+	Image     string                        `json:"image"`
+	Uptime    string                        `json:"uptime"`
+	Status    string                        `json:"status"`
+}
+
+type Response struct {
+	Containers []ListContainersResponse `json:"containers"` // 'containers' field will hold the list
+}
+
 func createConatainer(w http.ResponseWriter, r *http.Request) {
 	var containerReq request_models.ContainerCreationRequest
 	decoder := json.NewDecoder(r.Body)
@@ -35,6 +50,9 @@ func createConatainer(w http.ResponseWriter, r *http.Request) {
 		// If there is an error decoding, send a bad request response
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
+	}
+	if containerReq.NetworkName == "" {
+		containerReq.NetworkName = "default-private-net"
 	}
 	networkId := functions.GetNetworkIdFromName("litestack-" + containerReq.NetworkName)
 	if networkId == "" {
@@ -89,4 +107,34 @@ func deleteConatainer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(successResponse)
 
+}
+
+func listContainers(w http.ResponseWriter, r *http.Request) {
+	var containerList []ListContainersResponse
+
+	containers, err := functions.ListContainers()
+	if err != nil {
+		http.Error(w, "Error fetching networks", http.StatusBadRequest)
+		return
+	}
+	for _, container := range containers {
+		ipAddresses, err := functions.GetContainerIP(container.ID, dockerclient.CLI, dockerclient.CTX)
+		if err != nil {
+			http.Error(w, "Error fetching ip addresses", http.StatusBadRequest)
+			return
+		}
+		containerList = append(containerList, ListContainersResponse{
+			Name:      strings.Replace(container.Names[0], "/litestack-", "", -1),
+			IpAddress: ipAddresses,
+			Id:        container.ID,
+			Image:     container.Image,
+			Uptime:    container.Status,
+			Status:    container.State,
+		})
+	}
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(Response{
+		Containers: containerList,
+	})
 }

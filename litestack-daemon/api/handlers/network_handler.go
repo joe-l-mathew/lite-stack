@@ -20,9 +20,16 @@ type NetworkDeletionSuccessResponse struct {
 	NetworkID string `json:"network_id"`
 }
 
+type NetworkListResponse struct {
+	NetworkName   string   `json:"network_name"`
+	NetworkSubnet string   `json:"network_subnet"`
+	Containers    []string `json:"containers"`
+}
+
 func NetworkHandler(router *mux.Router) {
 	router.HandleFunc("/create/network", createNewtwork).Methods("POST")
 	router.HandleFunc("/delete/network", deleteNewtwork).Methods("POST")
+	router.HandleFunc("/list/networks", listNetworks).Methods("GET")
 }
 
 func createNewtwork(w http.ResponseWriter, r *http.Request) {
@@ -81,4 +88,22 @@ func deleteNewtwork(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(successResponse)
 
+}
+
+func listNetworks(w http.ResponseWriter, r *http.Request) {
+	networks, err := functions.ListNetworks()
+	if err != nil {
+		http.Error(w, "Error fetching networks", http.StatusBadRequest)
+		return
+
+	}
+	var networkList []NetworkListResponse
+	for _, network := range networks {
+		networkList = append(networkList, NetworkListResponse{
+			NetworkName:   strings.Replace(network.Name, "litestack-", "", -1),
+			NetworkSubnet: network.IPAM.Config[0].Subnet,
+		})
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(networkList)
 }
