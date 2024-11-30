@@ -6,5 +6,5 @@ type NetworkRequest struct {
 }
 
 type NetworkDeleteRequest struct {
-	NetworkId string `json:"network_id"`
+	NetworkName string `json:"network_name"`
 }
