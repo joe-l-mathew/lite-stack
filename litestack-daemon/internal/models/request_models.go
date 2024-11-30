@@ -1,4 +1,4 @@
-package request_models
+package models
 
 type NetworkRequest struct {
 	NetworkName string `json:"network_name"` // This will map the "network_name" from the JSON body
@@ -7,4 +7,9 @@ type NetworkRequest struct {
 
 type NetworkDeleteRequest struct {
 	NetworkName string `json:"network_name"`
+}
+
+type ContainerCreationRequest struct {
+	InstanceName string `json:"instance_name"`
+	NetworkName  string `json:"network_name"`
 }
