@@ -1,13 +1,16 @@
 package main
 
 import (
+	"litestack-daemon/internal/config"
 	"litestack-daemon/internal/dockerclient"
-	"litestack-daemon/internal/functions"
 )
 
 func main() {
+	// Get instance of cli and ctx
 	cli, ctx := dockerclient.CreateClient()
+	// close the connction on exit
 	defer cli.Close()
-	// functions.Create_Networks("test_network", cli, ctx)
-	functions.Delete_Network("53c0b78be3ea68d96fbb238f07175119f99485f819c20af533a14eb978d8f187", cli, ctx)
+	// Init will ensure the default and public network
+	//subnets are available in the installed environment
+	config.InitEnvironment(cli, ctx)
 }
