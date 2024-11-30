@@ -15,12 +15,17 @@ type NetworkCreationSuccessResponse struct {
 	Message   string `json:"message"`
 	NetworkID string `json:"network_id"`
 }
-
-func NetworkHandler(router *mux.Router) {
-	router.HandleFunc("/create/network", createNewtowork).Methods("POST")
+type NetworkDeletionSuccessResponse struct {
+	Message   string `json:"message"`
+	NetworkID string `json:"network_id"`
 }
 
-func createNewtowork(w http.ResponseWriter, r *http.Request) {
+func NetworkHandler(router *mux.Router) {
+	router.HandleFunc("/create/network", createNewtwork).Methods("POST")
+	router.HandleFunc("/delete/network", deleteNewtwork).Methods("POST")
+}
+
+func createNewtwork(w http.ResponseWriter, r *http.Request) {
 	var networkReq request_models.NetworkRequest
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&networkReq)
@@ -44,4 +49,31 @@ func createNewtowork(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(successResponse)
+}
+
+func deleteNewtwork(w http.ResponseWriter, r *http.Request) {
+	var networkDelReq request_models.NetworkDeleteRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&networkDelReq)
+	if err != nil {
+		// If there is an error decoding, send a bad request response
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if networkDelReq.NetworkId == "" {
+		http.Error(w, "Please pass a network_id as string", http.StatusBadRequest)
+		return
+	}
+	err = functions.Delete_Network(networkDelReq.NetworkId, dockerclient.CLI, dockerclient.CTX)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse := NetworkDeletionSuccessResponse{
+		Message:   "Network deletes successfully",
+		NetworkID: networkDelReq.NetworkId, // Include the network ID
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(successResponse)
+
 }
